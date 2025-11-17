@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History Penyiraman</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="history.css">
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2><span class="auto">Auto</span><span class="water">Water</span></h2>
+    <ul>
+      <li><a href="index.html">🏠 Beranda</a></li>
+      <li><a href="profil.html">👤 Profil</a></li>
+      <li><a href="history.html" class="active">📅 History</a></li>
+    </ul>
+    <button id="themeToggle">☀️</button>
+  </div>
+
+  <!-- Konten utama -->
+  <div class="main">
+    <h2>History Penyiraman</h2>
+
+    <div class="history-container">
+      <!-- Daftar Hari -->
+      <div class="day-list">
+        <button class="day-btn active" data-day="Senin">Senin</button>
+        <button class="day-btn" data-day="Selasa">Selasa</button>
+        <button class="day-btn" data-day="Rabu">Rabu</button>
+        <button class="day-btn" data-day="Kamis">Kamis</button>
+        <button class="day-btn" data-day="Jumat">Jumat</button>
+        <button class="day-btn" data-day="Sabtu">Sabtu</button>
+        <button class="day-btn" data-day="Minggu">Minggu</button>
+      </div>
+
+      <!-- Detail Data Hari -->
+      <div class="day-detail">
+        <h3 id="day-title">Data Hari Senin</h3>
+        <div id="day-data" class="day-data">
+          <!-- Data akan dimasukkan lewat JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="history.js"></script>
+ </body>
+</html>

@@ -1,0 +1,64 @@
+/* === Profil Page Styling === */
+
+.profile-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.profile-card {
+  background: #1b1e2f;
+  border-radius: 16px;
+  padding: 25px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 15px rgba(138, 94, 255, 0.4);
+}
+
+.profile-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #8a5eff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  line-height: 1.5;
+}
+
+.profile-info h4 {
+  margin: 0;
+  font-size: 16px;
+  color: white;
+}
+
+.profile-info p {
+  margin: 2px 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* === Responsif untuk HP === */
+@media (max-width: 600px) {
+  .profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-avatar {
+    margin-bottom: 10px;
+  }
+}

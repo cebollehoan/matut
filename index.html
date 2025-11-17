@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard IoT - Beranda</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <div class="sidebar">
+    <h2><span class="auto">Auto</span><span class="water">Water</span></h2>
+    <ul>
+      <li><a href="index.html">🏠 Beranda</a></li>
+      <li><a href="profil.html">👤 Profil</a></li>
+      <li><a href="history.html">📅 History</a></li>
+    </ul>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <div class="status-area">
+        <div id="status-indikator" class="status"></div>
+        <span>Status Penyiraman</span>
+      </div>
+      <button id="testBtn">Tes Indikator</button>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card">
+        <canvas id="moistureChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+
+    <div class="history">
+      <h3>Riwayat Hari Ini</h3>
+      <div id="history" class="history-table"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
