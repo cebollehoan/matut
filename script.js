@@ -1,122 +1,93 @@
-// === INISIALISASI GRAFIK LINE (KELEMBAPAN) ===
-const ctx1 = document.getElementById("moistureChart").getContext("2d");
-const moistureChart = new Chart(ctx1, {
-  type: "line",
-  data: {
-    labels: [],
-    datasets: [{
-      label: "Kelembapan Tanah (%)",
-      data: [],
-      borderColor: "#a56cff",
-      backgroundColor: "rgba(165, 108, 255, 0.2)",
-      tension: 0.4,
-      fill: true,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    }]
-  },
-  options: {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        title: { display: true, text: "Kelembapan (%)" }
-      },
-      x: {
-        title: { display: true, text: "Waktu (Jam)" }
-      }
-    },
-    plugins: {
-      legend: {
-        labels: { color: "white" }
-      }
-    }
+// ==============================
+// CONFIG MQTT
+// ==============================
+const MQTT_OPTIONS = {
+  clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 3000,
+};
+
+// BROKER PUBLIK (langsung bisa konek)
+const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
+
+// TOPIC
+const TOPIC_SENSOR = "kebun/sensor/kelembapan";
+const TOPIC_POMPA = "kebun/control/pompa";
+
+// CONNECT
+const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
+
+client.on("connect", () => {
+  console.log("✓ MQTT Connected");
+  client.subscribe(TOPIC_SENSOR);
+});
+
+// ==============================
+// TERIMA DATA SENSOR DARI ESP32
+// ==============================
+client.on("message", (topic, payload) => {
+  if (topic === TOPIC_SENSOR) {
+    const value = parseInt(payload.toString());
+    console.log("Kelembapan:", value);
+
+    // Update grafik kamu di sini:
+    updateMoistureChart(value);
+
+    // Update indikator kondisi
+    updateMoistureStatus(value);
+
+    // Masukkan riwayat
+    addHistoryItem(value);
   }
 });
 
-// === INISIALISASI PIE CHART ===
-const ctx2 = document.getElementById("pieChart").getContext("2d");
-const pieChart = new Chart(ctx2, {
-  type: "pie",
-  data: {
-    labels: ["Kering", "Lembab", "Basah"],
-    datasets: [{
-      data: [60, 30, 10],
-      backgroundColor: ["#8b5cf6", "#a78bfa", "#c4b5fd"]
-    }]
-  }
-});
-
-// === UPDATE DASHBOARD ===
-function updateDashboard(data) {
-  const now = new Date();
-  const timeLabel = now.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-
-  // Update line chart
-  moistureChart.data.labels.push(timeLabel);
-  moistureChart.data.datasets[0].data.push(data.moistureValue);
-
-  if (moistureChart.data.labels.length > 10) {
-    moistureChart.data.labels.shift();
-    moistureChart.data.datasets[0].data.shift();
-  }
-
-  moistureChart.update();
-
-  // Update pie chart
-  pieChart.data.datasets[0].data = [data.kering, data.lembab, data.basah];
-  pieChart.update();
-
-  // Update indikator status
-  const indikator = document.getElementById("status-indikator");
-  indikator.style.backgroundColor = data.isWatering ? "limegreen" : "red";
-
-  // Update history
-  const historyDiv = document.getElementById("history");
-  const item = document.createElement("div");
-  item.className = "history-item";
-  item.innerHTML = `
-    <span>${now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}</span>
-    <span>${now.toLocaleTimeString("id-ID")}</span>
-    <span>${data.condition}</span>
-    <span>${data.isWatering ? "Siram" : "-"}</span>
-  `;
-
-  historyDiv.prepend(item);
-
-  // Limit maksimal 15 history
-  if (historyDiv.children.length > 15) {
-    historyDiv.removeChild(historyDiv.lastChild);
-  }
+// ==============================
+// KIRIM PERINTAH KE ESP32 (Tombol di Web)
+// ==============================
+function pompaOn() {
+  client.publish(TOPIC_POMPA, "1");
+  console.log("Pompa hidup");
 }
 
-// === SIMULASI DUMMY DATA SETIAP 5 DETIK ===
-setInterval(() => {
-  const dummyValue = Math.floor(Math.random() * 100);
-  const dummyData = {
-    moistureValue: dummyValue,
-    kering: 100 - dummyValue,
-    lembab: Math.floor(dummyValue / 2),
-    basah: Math.floor(dummyValue / 3),
-    isWatering: dummyValue < 40, // Menyiram kalau kelembapan < 40%
-    condition:
-      dummyValue < 40
-        ? "Kering"
-        : dummyValue < 70
-        ? "Lembab"
-        : "Basah",
-  };
-  updateDashboard(dummyData);
-}, 5000);
+function pompaOff() {
+  client.publish(TOPIC_POMPA, "0");
+  console.log("Pompa mati");
+}
 
-// === TEST BUTTON (MANUAL SIRAM) ===
+// Contoh untuk button HTML
 document.getElementById("testBtn").addEventListener("click", () => {
-  const indikator = document.getElementById("status-indikator");
-  const isGreen = indikator.style.backgroundColor === "limegreen";
-  indikator.style.backgroundColor = isGreen ? "red" : "limegreen";
+  pompaOn();       // klik = ON
+  setTimeout(pompaOff, 2000); // 2 detik → OFF otomatis
 });
+
+// =====================================================
+// ==== FUNGSI UNTUK UPDATE DASHBOARD (BUAT MU SENDIRI)
+// =====================================================
+
+// Update grafik
+function updateMoistureChart(value) {
+  moistureChart.data.labels.push(new Date().toLocaleTimeString());
+  moistureChart.data.datasets[0].data.push(value);
+  moistureChart.update();
+}
+
+// Status penyiraman / kondisi tanah
+function updateMoistureStatus(value) {
+  const indikator = document.getElementById("status-indikator");
+  indikator.style.backgroundColor = value < 30 ? "red" : "limegreen";
+}
+
+// Riwayat
+function addHistoryItem(value) {
+  const h = document.getElementById("history");
+  const div = document.createElement("div");
+  div.className = "history-item";
+
+  div.innerHTML = `
+    <span>${new Date().toLocaleTimeString()}</span>
+    <span>${value}%</span>
+    <span>${value < 30 ? "Kering" : "Normal"}</span>
+  `;
+
+  h.prepend(div);
+}
