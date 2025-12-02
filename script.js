@@ -1,18 +1,25 @@
 // ==============================
-// FINAL MQTT DASHBOARD (DATA RILL)
-// Tampilan sama seperti kode awal, namun menggunakan data asli (raw + percent)
+// MQTT DASHBOARD FINAL (EMQX)
 // ==============================
 
 // ==============================
-// MQTT CONFIG
+// DEFAULT BROKER EMQX
 // ==============================
-const MQTT_OPTIONS = {
+let MQTT_URL = "wss://be18723f.ala.eu-central-1.emqxsl.com:8084/mqtt";
+
+// ==============================
+// MQTT OPTIONS
+// ==============================
+let MQTT_OPTIONS = {
   clean: true,
-  connectTimeout: 4000,
+  connectTimeout: 5000,
   reconnectPeriod: 3000,
+  // Jika EMQX pakai auth:
+  // username: "your-user",
+  // password: "your-pass",
 };
 
-const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
+let client = null;
 
 // ==============================
 // TOPICS (REAL ESP32)
@@ -28,7 +35,150 @@ const TOPIC_LOG = "kebun/log/kelembapan";
 const TOPIC_HEARTBEAT = "kebun/status/heartbeat";
 
 // ==============================
-// CHART.JS - LINE CHART (KELEMBAPAN)
+// UI ELEMENTS
+// ==============================
+const statusIndikator = document.getElementById("status-indikator");
+const warningArea = document.getElementById("warningArea");
+
+// ==============================
+// CONNECT BUTTON HANDLER
+// ==============================
+document.getElementById("connectBtn").onclick = () => {
+  MQTT_URL = document.getElementById("brokerUrl").value;
+
+  console.log("Connecting to:", MQTT_URL);
+
+  client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
+
+  setupClientEvents();
+};
+
+// ==============================
+// DISCONNECT BUTTON HANDLER
+// ==============================
+document.getElementById("disconnectBtn").onclick = () => {
+  if (client) {
+    client.end(true);
+    console.log("Disconnected manually");
+    setStatus(false);
+  }
+};
+
+// ==============================
+// SETUP MQTT EVENT HANDLERS
+// ==============================
+function setupClientEvents() {
+  client.on("connect", () => {
+    console.log("✓ Connected to EMQX");
+    setStatus(true);
+
+    client.subscribe(TOPIC_SENSOR);
+    client.subscribe(TOPIC_POMPA_STAT);
+    client.subscribe(TOPIC_WARNING);
+    client.subscribe(TOPIC_LOG);
+    client.subscribe(TOPIC_HEARTBEAT);
+  });
+
+  client.on("reconnect", () => {
+    console.log("Reconnecting...");
+  });
+
+  client.on("close", () => {
+    setStatus(false);
+  });
+
+  client.on("error", (err) => {
+    console.log("MQTT Error:", err);
+  });
+
+  client.on("message", mqttMessageHandler);
+}
+
+// ==============================
+// MQTT MESSAGE HANDLER
+// ==============================
+function mqttMessageHandler(topic, payload) {
+  const msg = payload.toString();
+  console.log(topic + " → " + msg);
+
+  if (topic === TOPIC_SENSOR) {
+    try {
+      const j = JSON.parse(msg);
+      updateDashboard(j.raw, j.percent);
+    } catch (e) {
+      console.warn("Sensor JSON error:", e);
+    }
+  }
+
+  if (topic === TOPIC_POMPA_STAT) {
+    const pump = document.getElementById("pumpStatus");
+    if (msg === "1" || msg === "ON") {
+      pump.textContent = "ON";
+      pump.classList.remove("status-red");
+      pump.classList.add("status-green");
+    } else {
+      pump.textContent = "OFF";
+      pump.classList.add("status-red");
+      pump.classList.remove("status-green");
+    }
+  }
+
+  if (topic === TOPIC_WARNING) {
+    warningArea.textContent = msg;
+  }
+
+  if (topic === TOPIC_LOG) {
+    try {
+      const j = JSON.parse(msg);
+      if (j.count !== undefined) {
+        document.getElementById("countVal").textContent = j.count;
+      }
+    } catch {}
+  }
+}
+
+// ==============================
+// SEND COMMANDS
+// ==============================
+document.getElementById("btnPumpOn").onclick = () => {
+  client.publish(TOPIC_POMPA_CTRL, "ON");
+};
+
+document.getElementById("btnPumpOff").onclick = () => {
+  client.publish(TOPIC_POMPA_CTRL, "OFF");
+};
+
+document.getElementById("btnModeAuto").onclick = () => {
+  client.publish(TOPIC_MODE, "AUTO");
+};
+
+document.getElementById("btnModeManual").onclick = () => {
+  client.publish(TOPIC_MODE, "MANUAL");
+};
+
+document.getElementById("btnKalib").onclick = () => {
+  const val = document.getElementById("kalibInput").value;
+  client.publish(TOPIC_KALIB, val);
+};
+
+document.getElementById("btnThreshold").onclick = () => {
+  const val = document.getElementById("thresholdInput").value;
+  client.publish(TOPIC_THRESHOLD, val);
+};
+
+// ==============================
+// STATUS UI HELPER
+// ==============================
+function setStatus(isConnected) {
+  if (isConnected) {
+    statusIndikator.style.background = "limegreen";
+  } else {
+    statusIndikator.style.background = "gray";
+  }
+}
+
+// ==============================
+// CHART.JS SETUP
 // ==============================
 const ctx1 = document.getElementById("moistureChart").getContext("2d");
 const moistureChart = new Chart(ctx1, {
@@ -40,143 +190,34 @@ const moistureChart = new Chart(ctx1, {
         label: "Kelembapan Tanah (%)",
         data: [],
         borderColor: "#a56cff",
-        backgroundColor: "rgba(165, 108, 255, 0.2)",
-        tension: 0.4,
+        backgroundColor: "rgba(165,108,255,0.2)",
         fill: true,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        tension: 0.4,
       },
     ],
   },
-  options: {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        title: { display: true, text: "Kelembapan (%)" },
-      },
-      x: {
-        title: { display: true, text: "Waktu (Jam)" },
-      },
-    },
-    plugins: {
-      legend: {
-        labels: { color: "white" },
-      },
-    },
-  },
+  options: { responsive: true },
 });
 
-// ==============================
-// PIE CHART (STATUS TANAH REAL)
-// ==============================
 const ctx2 = document.getElementById("pieChart").getContext("2d");
 const pieChart = new Chart(ctx2, {
   type: "pie",
   data: {
     labels: ["Kering", "Lembab", "Basah"],
-    datasets: [
-      {
-        data: [0, 0, 0],
-        backgroundColor: ["#8b5cf6", "#a78bfa", "#c4b5fd"],
-      },
-    ],
+    datasets: [{ data: [0, 0, 0] }],
   },
 });
 
 // ==============================
-// MQTT CONNECT
-// ==============================
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
-client.on("connect", () => {
-  console.log("✓ MQTT Connected");
-  client.subscribe(TOPIC_SENSOR);
-  client.subscribe(TOPIC_POMPA_STAT);
-  client.subscribe(TOPIC_WARNING);
-  client.subscribe(TOPIC_LOG);
-  client.subscribe(TOPIC_HEARTBEAT);
-});
-
-// ==============================
-// MQTT RECEIVE MESSAGE
-// ==============================
-client.on("message", (topic, payload) => {
-  const msg = payload.toString();
-  console.log(topic + " → " + msg);
-
-  if (topic === TOPIC_SENSOR) {
-    try {
-      const j = JSON.parse(msg);
-      updateDashboard(j.raw, j.percent);
-    } catch (e) {
-      console.log("Error parsing JSON sensor", e);
-    }
-  }
-
-  if (topic === TOPIC_POMPA_STAT) {
-    const pumpStatus = document.getElementById("pumpStatusReal");
-    if (msg === "1" || msg === "ON") {
-      pumpStatus.textContent = "ON";
-      pumpStatus.style.color = "lime";
-    } else {
-      pumpStatus.textContent = "OFF";
-      pumpStatus.style.color = "red";
-    }
-  }
-
-  if (topic === TOPIC_WARNING) {
-    document.getElementById("warningArea").textContent = msg;
-  }
-
-  if (topic === TOPIC_LOG) {
-    try {
-      const j = JSON.parse(msg);
-      if (j.count !== undefined) {
-        document.getElementById("countVal").textContent = j.count;
-      }
-    } catch (e) {}
-  }
-});
-
-// ==============================
-// KIRIM PERINTAH POMPA KE ESP32
-// ==============================
-function pompaOn() {
-  client.publish(TOPIC_POMPA_CTRL, "ON");
-  console.log("Pompa ON (manual)");
-}
-
-function pompaOff() {
-  client.publish(TOPIC_POMPA_CTRL, "OFF");
-  console.log("Pompa OFF (manual)");
-}
-
-document.getElementById("testBtn").addEventListener("click", () => {
-  pompaOn();
-  setTimeout(pompaOff, 2000);
-});
-
-// ==============================
-// UPDATE DASHBOARD (REAL DATA)
+// UPDATE DASHBOARD DATA
 // ==============================
 function updateDashboard(rawValue, percentValue) {
   document.getElementById("rawVal").textContent = rawValue;
   document.getElementById("percentVal").textContent = percentValue;
 
-  const now = new Date();
-  const timeLabel = now.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-
-  // Tentukan kondisi berdasarkan data % asli
-  let condition = percentValue < 40 ? "Kering" : percentValue < 70 ? "Lembab" : "Basah";
-
-  // === UPDATE LINE CHART ===
-  moistureChart.data.labels.push(timeLabel);
+  // === LINE CHART ===
+  const now = new Date().toLocaleTimeString("id-ID");
+  moistureChart.data.labels.push(now);
   moistureChart.data.datasets[0].data.push(percentValue);
 
   if (moistureChart.data.labels.length > 15) {
@@ -186,33 +227,11 @@ function updateDashboard(rawValue, percentValue) {
 
   moistureChart.update();
 
-  // === UPDATE PIE CHART ===
+  // === PIE CHART ===
   pieChart.data.datasets[0].data = [
     percentValue < 40 ? 100 : 0,
     percentValue >= 40 && percentValue < 70 ? 100 : 0,
     percentValue >= 70 ? 100 : 0,
   ];
   pieChart.update();
-
-  // === INDIKATOR STATUS ===
-  const indikator = document.getElementById("status-indikator");
-  indikator.style.backgroundColor = percentValue < 40 ? "red" : "limegreen";
-
-  // === HISTORY ===
-  const historyDiv = document.getElementById("history");
-  const item = document.createElement("div");
-  item.className = "history-item";
-
-  item.innerHTML = `
-    <span>${now.toLocaleDateString("id-ID")}</span>
-    <span>${timeLabel}</span>
-    <span>${condition}</span>
-    <span>${percentValue}%</span>
-  `;
-
-  historyDiv.prepend(item);
-
-  if (historyDiv.children.length > 15) {
-    historyDiv.removeChild(historyDiv.lastChild);
-  }
 }
