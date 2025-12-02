@@ -5,23 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard IoT - Beranda</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
 </head>
 
 <body>
 
+  <!-- ============================= SIDEBAR ============================= -->
   <div class="sidebar">
     <h2><span class="auto">Auto</span><span class="water">Water</span></h2>
+
     <ul>
       <li><a href="index.html">🏠 Beranda</a></li>
       <li><a href="profil.html">👤 Profil</a></li>
       <li><a href="history.html">📅 History</a></li>
     </ul>
+
+    <div class="col1">
+      <label>MQTT Broker</label>
+      <input id="brokerUrl" type="text" value="wss://broker.hivemq.com:8884/mqtt" />
+      <div class="small"></div>
+    </div>
+
+    <div class="col2">
+      <label>Client ID</label>
+      <input id="clientId" type="text" value="web_dash_ESP32_01" />
+    </div>
+
+    <div id="brokk" class="col3">
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" class="secondary">Disconnect</button>
+    </div>
   </div>
 
+  <!-- ============================= MAIN AREA ============================= -->
   <div class="main">
+
+    <!-- ============================= HEADER ============================= -->
     <div class="header">
       <div class="status-area">
         <div id="status-indikator" class="status"></div>
@@ -30,6 +48,7 @@
       <button id="testBtn">Tes Indikator</button>
     </div>
 
+    <!-- ============================= CHARTS ============================= -->
     <div class="charts">
       <div class="chart-card">
         <canvas id="moistureChart"></canvas>
@@ -39,13 +58,69 @@
       </div>
     </div>
 
+    <!-- ============================= SENSOR / MODE / KALIBRASI ============================= -->
+    <div class="card row">
+
+      <!-- SENSOR -->
+      <div class="col">
+        <h3>Sensor</h3>
+        <div>Raw: <span id="rawVal">-</span></div>
+        <div>Percent: <span id="percentVal">-</span> %</div>
+        <div>Jumlah Siram Hari: <span id="countVal">-</span></div>
+        <div class="small"></div>
+      </div>
+
+      <!-- POMPA & MODE -->
+      <div class="col">
+        <h3>Pompa & Mode</h3>
+        <div>Pompa: <span id="pumpStatus" class="status-red">OFF</span></div>
+        <div>Mode: <span id="modeStatus">AUTO</span></div>
+
+        <div style="margin-top:8px">
+          <button id="btnPumpOn">POMPA ON</button>
+          <button id="btnPumpOff" class="secondary">POMPA OFF</button>
+        </div>
+
+        <div style="margin-top:8px">
+          <button id="btnModeAuto">Set AUTO</button>
+          <button id="btnModeManual" class="secondary">Set MANUAL</button>
+        </div>
+      </div>
+
+      <!-- KALIBRASI & THRESHOLD -->
+      <div class="col">
+        <h3>Kalibrasi / Threshold</h3>
+
+        <label>Kalibrasi</label>
+        <input id="kalibInput" type="text" value="2100,900" />
+        <button id="btnKalib">Kirim Kalibrasi</button>
+
+        <label style="margin-top:8px">Threshold (%)</label>
+        <input id="thresholdInput" type="number" min="0" max="100" value="40" />
+        <button id="btnThreshold">Set Threshold</button>
+      </div>
+
+    </div>
+
+    <!-- ============================= WARNING + LOG ============================= -->
+    <div class="card">
+      <h3>Warnings & Log</h3>
+      <div id="warningArea" class="small"></div>
+      <pre id="logArea">-- Log kosong --</pre>
+    </div>
+
+    <!-- ============================= HISTORY ============================= -->
     <div class="history">
       <h3>Riwayat Hari Ini</h3>
       <div id="history" class="history-table"></div>
     </div>
+
   </div>
 
+  <!-- ============================= SCRIPT ============================= -->
   <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 </body>
 </html>
